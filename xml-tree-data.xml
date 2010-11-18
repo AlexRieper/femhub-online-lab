@@ -1,0 +1,23 @@
+<olab>
+	<category catname="Problems" catid="prob">
+		<category catname="Matematics" catid="mat">	
+			<category catname="Numbers and Computation" catid="1.0">
+				<notesheet guid="1.1" sheetname="Summing" leaf="true">
+					Sum 2 numbers.
+				</notesheet>	
+			</category>
+		</category>
+		<category catname="Phisics" catid="phi">	
+			<category catname="Forces" catid="2.0">
+				<notesheet guid="2.1" sheetname="Newton" leaf="true">
+					Newton
+				</notesheet>
+			</category>
+		</category>
+	</category>
+	<category catname="Solutions" catid="sol" leaf="false">
+		<notesheet guid="44" sheetname="Test" leaf="true">
+			tescik.
+		</notesheet>
+	</category>
+</olab>
