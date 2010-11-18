@@ -110,16 +110,24 @@ FEMhub.Login = Ext.extend(FEMhub.Window, {
             buttonAlign: 'left',
             buttons: [{
                 text: 'Published worksheets',
-                minWidth: 130,
+                //minWidth: 125,
                 align: 'left',
                 handler: function() {
                     var win = new FEMhub.PublishedWorksheets();
                     win.show();
                 },
                 scope: this,
-            }, '->', {
+            }, {
+                text: 'Show taxonomy',
+                minWidth: 100,
+                handler: function() {
+                    var win = new FEMhub.ShowTaxonomy();
+                    win.show();
+                },
+                scope: this,
+            }, {
                 text: 'Create account',
-                minWidth: 110,
+                minWidth: 100,
                 handler: function() {
                     var win = new FEMhub.CreateAccount(this);
                     win.show();
@@ -127,7 +135,7 @@ FEMhub.Login = Ext.extend(FEMhub.Window, {
                 scope: this,
             }, {
                 text: 'Forgot password?',
-                minWidth: 110,
+                minWidth: 100,
                 handler: function() {
                     var win = new FEMhub.RemindPassword(this);
                     win.show();
@@ -515,4 +523,6 @@ FEMhub.Modules.Logout = Ext.extend(FEMhub.Module, {
         });
     },
 });
+
+
 
