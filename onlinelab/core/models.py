@@ -87,3 +87,22 @@ class Cell(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
+class Category(models.Model):
+    uuid = UUIDField()
+    name = models.CharField(max_length=MAX_NAME)
+    parent = models.ForeignKey('self', null=True, default=None)
+
+    def get_path(self):
+        """Get full path to this folder in array form. """
+        path, category = [], self
+
+        while category is not None:
+            path.insert(0, category.name)
+            category = category.parent
+        return path
+
+class Taxonomy(models.Model):
+    uuid = UUIDField()
+    name = models.CharField(max_length=MAX_NAME)
+    category = models.ForeignKey(Category, null=True, default=None)
+    worksheet = models.ForeignKey(Worksheet, null=True, default=None)

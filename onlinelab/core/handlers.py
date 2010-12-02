@@ -21,7 +21,7 @@ from ..utils import jsonrpc
 from ..utils import Settings
 from ..utils import extensions
 
-from models import User, Engine, Folder, Worksheet, Cell
+from models import User, Engine, Folder, Worksheet, Cell, Category, Taxonomy
 
 class ParseError(Exception):
     """Raised when '{{{' or '}}}' is misplaced. """
@@ -79,20 +79,27 @@ class ClientHandler(WebHandler):
         'RPC.Core.getEngines',
         'RPC.Core.getUsers',
         'RPC.Core.getPublishedWorksheets',
+        'RPC.Core.getMyWorksheets',
         'RPC.Folder.getRoot',
         'RPC.Folder.create',
+        'RPC.Category.create',
         'RPC.Folder.remove',
+        'RPC.Category.remove',
         'RPC.Folder.rename',
         'RPC.Folder.move',
         'RPC.Folder.getFolders',
+        'RPC.Category.getFolders',
         'RPC.Folder.getWorksheets',
+        'RPC.Category.getWorksheets',
         'RPC.Worksheet.create',
         'RPC.Worksheet.remove',
+        'RPC.Taxonomy.remove',
         'RPC.Worksheet.rename',
         'RPC.Worksheet.describe',
         'RPC.Worksheet.move',
         'RPC.Worksheet.publish',
         'RPC.Worksheet.fork',
+        'RPC.Taxonomy.add',
         'RPC.Worksheet.sync',
         'RPC.Worksheet.load',
         'RPC.Worksheet.save',
@@ -310,6 +317,47 @@ class ClientHandler(WebHandler):
 
         self.return_api_result({'users': users})
 
+    def RPC__Core__getMyWorksheets(self):
+        """
+        Return a list of all published worksheets by users.
+
+        This does not require any authentication, because all this information
+        is public. This method does not (under any circumstances) return any
+        private data (like emails and so on). It only returns users with
+        published worksheets.
+
+        Otherwise it is very similar to RPC.Core.getUsers().
+        """
+        users = []
+
+        for user in User.objects.all():
+            user_worksheets = []
+
+            for worksheet in Worksheet.objects.filter(user=self.user):
+                user_worksheets.append({
+                    'uuid': worksheet.uuid,
+                    'name': worksheet.name,
+                    'description': worksheet.description,
+                    'created': jsonrpc.datetime(worksheet.created),
+                    'modified': jsonrpc.datetime(worksheet.modified),
+                    'published': jsonrpc.datetime(worksheet.published),
+                    'engine': {
+                        'uuid': worksheet.engine.uuid,
+                        'name': worksheet.engine.name,
+                    },
+                })
+
+            if len(user_worksheets) > 0:
+                data = {
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'worksheets': user_worksheets,
+                }
+                users.append(data)
+
+        self.return_api_result({'users': users})
+
     @jsonrpc.authenticated
     def RPC__Folder__getRoot(self):
         """Return the main folder for the current user ("My folders"). """
@@ -338,6 +386,22 @@ class ClientHandler(WebHandler):
             self.return_api_result({'uuid': folder.uuid})
 
     @jsonrpc.authenticated
+    def RPC__Category__create(self, name, uuid=None):
+        """Create a new category and add it to a parent with the given ``uuid``. """
+        try:
+            if uuid is not None:
+                parent = Category.objects.get(uuid=uuid)
+            else:
+                parent = None
+        except Category.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            category = Category(parent=parent, name=name)
+            category.save()
+
+            self.return_api_result({'uuid': category.uuid})
+
+    @jsonrpc.authenticated
     def RPC__Folder__remove(self, uuid):
         """Remove folder pointed by the given ``uuid``. """
         try:
@@ -346,6 +410,17 @@ class ClientHandler(WebHandler):
             self.return_api_error('does-not-exist')
         else:
             folder.delete()
+            self.return_api_result()
+
+    @jsonrpc.authenticated
+    def RPC__Category__remove(self, uuid):
+        """Remove category pointed by the given ``uuid``. """
+        try:
+            category = Category.objects.get(uuid=uuid)
+        except Category.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            category.delete()
             self.return_api_result()
 
     @jsonrpc.authenticated
@@ -421,6 +496,48 @@ class ClientHandler(WebHandler):
             self.return_api_result({'folders': _get_folders(parent)})
 
     @jsonrpc.authenticated
+    def RPC__Category__getFolders(self, uuid=None, recursive=True, worksheets=False):
+        """Get a list of sub-folders for the given parent ``uuid``. """
+        try:
+            if uuid is not None:
+                parent = Category.objects.get(uuid=uuid)
+            else:
+                parent = None
+        except Category.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            def _get_taxonomies(category):
+                """Collect all worksheets in ``folder``. """
+                taxonomies = []
+
+                for taxonomy in Taxonomy.objects.filter(category=category):
+                    taxonomies.append({'uuid': taxonomy.uuid, 'name': taxonomy.name})
+
+                return taxonomies
+
+            def _get_folders(parent):
+                """Collect all sub-folders of ``parent``. """
+                categories = []
+
+                for category in Category.objects.filter(parent=parent):
+                    data = {
+                        'uuid': category.uuid,
+                        'name': category.name,
+                    }
+
+                    if recursive:
+                        data['folders'] = _get_folders(category)
+
+                    if worksheets:
+                        data['worksheets'] = _get_worksheets(category)
+
+                    categories.append(data)
+
+                return categories
+
+            self.return_api_result({'folders': _get_folders(parent)})
+
+    @jsonrpc.authenticated
     def RPC__Folder__getWorksheets(self, uuid):
         """Get all worksheets from the given folder. """
         try:
@@ -458,6 +575,46 @@ class ClientHandler(WebHandler):
             self.return_api_result({'worksheets': worksheets})
 
     @jsonrpc.authenticated
+    def RPC__Category__getWorksheets(self, uuid):
+        """Get all worksheets from the given folder. """      
+        try:
+            category = Category.objects.get(uuid=uuid)
+        except Category.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            taxonomies = []
+            for taxonomy in Taxonomy.objects.filter(category=category):
+                taxonomies.append(taxonomy.worksheet_id)
+            worksheets = []
+            
+            for worksheet in Worksheet.objects.all():
+                if worksheet.id in taxonomies:
+                    if worksheet.origin is None:
+                        origin = None
+                    else:
+                        origin = {
+                            'uuid': worksheet.origin.uuid,
+                            'name': worksheet.origin.name,
+                            'path': worksheet.origin.folder.get_path(),
+                            'user': worksheet.origin.user.username,
+                        }
+
+                    worksheets.append({
+                        'uuid': worksheet.uuid,
+                        'name': worksheet.name,
+                        'created': jsonrpc.datetime(worksheet.created),
+                        'modified': jsonrpc.datetime(worksheet.modified),
+                        'published': jsonrpc.datetime(worksheet.published),
+                        'description': worksheet.description,
+                        'engine': {
+                            'uuid': worksheet.engine.uuid,
+                            'name': worksheet.engine.name,
+                        },
+                        'origin': origin,
+                    }) 
+            self.return_api_result({'worksheets': worksheets})
+
+    @jsonrpc.authenticated
     def RPC__Worksheet__create(self, name, engine_uuid, folder_uuid):
         """Create new worksheet and add it to the given folder. """
         try:
@@ -488,6 +645,19 @@ class ClientHandler(WebHandler):
             self.return_api_error('does-not-exist')
         else:
             worksheet.delete()
+            self.return_api_result()
+
+    @jsonrpc.authenticated
+    def RPC__Taxonomy__remove(self, uuid):
+        """Remove a taxonomy pointed by the given ``uuid``. """
+        try:
+            worksheet = Worksheet.objects.get(uuid=uuid)
+        except Worksheet.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            for taxonomy in Taxonomy.objects.all():
+                if taxonomy.worksheet_id == worksheet.id:
+                    taxonomy.delete()
             self.return_api_result()
 
     @jsonrpc.authenticated
@@ -608,6 +778,30 @@ class ClientHandler(WebHandler):
         self.return_api_result({
             'uuid': worksheet.uuid,
             'name': worksheet.name,
+        })
+
+    @jsonrpc.authenticated
+    def RPC__Taxonomy__add(self, origin_uuid, category_uuid):
+        """Create an exact copy of a worksheet from an origin. """
+        try:
+            origin = Worksheet.objects.get(uuid=origin_uuid)
+        except Worksheet.DoesNotExist:
+            self.return_api_error('origin-does-not-exist')
+            return
+        try:
+            category = Category.objects.get(uuid=category_uuid)
+        except Category.DoesNotExist:
+            self.return_api_error('category-does-not-exist')
+            return
+        taxonomy = Taxonomy(
+            name=origin.name,
+            category=category,
+            worksheet_id=origin.id)
+        taxonomy.save()
+
+        self.return_api_result({
+            'uuid': taxonomy.uuid,
+            'name': taxonomy.name,
         })
 
     @jsonrpc.authenticated

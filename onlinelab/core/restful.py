@@ -10,7 +10,7 @@ import errors
 
 from ..utils import Settings
 
-from models import User, Engine, Folder, Worksheet, Cell
+from models import User, Engine, Folder, Worksheet, Cell, Category, Taxonomy
 
 class RESTfulRequestHandler(errors.ErrorMixin, tornado.web.RequestHandler):
     """Base class for all RESTful request handlers. """
