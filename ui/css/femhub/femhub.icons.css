@@ -159,3 +159,15 @@
     background-image: url(/static/img/femhub/icons/exclamation.png) !important;
 }
 
+.femhub-taxbrowser-launcher-icon {
+    background-image: url(/static/img/femhub/icons/64x64/taxonomy.png) !important;
+}
+
+.femhub-taxbrowser-icon {
+    background-image: url(/static/img/femhub/icons/16x16/taxonomy.png) !important;
+}
+
+.femhub-add-taxonomy-icon {
+    background-image: url(/static/img/femhub/icons/taxonomy_add.png) !important;
+}
+

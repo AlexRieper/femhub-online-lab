@@ -1,4 +1,9 @@
-
+.femhub-category.x-tree-node-collapsed .x-tree-node-icon, .femhub-category.x-tree-node-leaf .x-tree-node-icon{
+    background-image: url(/static/img/femhub/icons/closecat.png) !important;
+}
+.femhub-category.x-tree-node-expanded .x-tree-node-icon {
+    background-image: url(/static/img/femhub/icons/opencat.png) !important;
+}
 .femhub-folder.x-tree-node-leaf .x-tree-node-icon {
     background-image: url(/static/external/ext/images/default/tree/folder.gif) !important;
 }

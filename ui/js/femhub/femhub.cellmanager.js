@@ -472,7 +472,9 @@ FEMhub.CellManager = Ext.extend(Ext.util.Observable, {
                 }
             },
             fail: function(reason, result) {
-                // TODO
+                if (result.reason == 'does-not-exist') {
+                    FEMhub.msg.warning(this, "Can't save changes in other user's worksheet.");
+                }
             },
             scope: this,
             status: {

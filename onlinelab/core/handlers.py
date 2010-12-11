@@ -100,6 +100,7 @@ class ClientHandler(WebHandler):
         'RPC.Worksheet.publish',
         'RPC.Worksheet.fork',
         'RPC.Taxonomy.add',
+        'RPC.Worksheet.getTaxonomy',
         'RPC.Worksheet.sync',
         'RPC.Worksheet.load',
         'RPC.Worksheet.save',
@@ -805,6 +806,24 @@ class ClientHandler(WebHandler):
         })
 
     @jsonrpc.authenticated
+    def RPC__Worksheet__getTaxonomy(self, uuid):
+        """Get categories' names of selected Worksheet """
+        try:
+            worksheet = Worksheet.objects.get(uuid=uuid) #user=self.user,
+        except Worksheet.DoesNotExist:
+            self.return_api_error('does-not-exist')
+        else:
+            taxonomies = []
+            categories = []
+            for taxonomy in Taxonomy.objects.filter(worksheet=worksheet):
+                taxonomies.append(taxonomy.category_id)
+            for i in range(0, len(taxonomies)):
+                for category in Category.objects.all():
+                    if category.id == taxonomies[i]:
+                        categories.append(category.name)
+            self.return_api_result({'taxonomies': categories})
+
+    @jsonrpc.authenticated
     def RPC__Worksheet__sync(self, uuid, force=False):
         """Synchronize a worksheet with its origin. """
         try:
@@ -837,7 +856,6 @@ class ClientHandler(WebHandler):
                             content=base.content,
                             worksheet=worksheet)
                 order.append(cell.uuid)
-                cell.save()
 
         worksheet.set_order(order)
         worksheet.save()

@@ -202,6 +202,15 @@ FEMhub.Worksheet = Ext.extend(FEMhub.Window, {
                     scope: this,
                 }],
             }, {
+                text: 'Taxonomy',
+                menu: [{
+                    text: 'Show Taxonomy',
+                    handler: function() {
+                        this.getTaxonomy();
+                    },
+                    scope: this,
+                }],
+            }, {
                 text: 'View',
                 menu: [{
                     text: 'Toolbar',
@@ -366,6 +375,27 @@ FEMhub.Worksheet = Ext.extend(FEMhub.Window, {
                 scope: this,
             }],
         });
+    },
+ 
+    getTaxonomy: function() {
+        FEMhub.RPC.Worksheet.getTaxonomy({uuid: this.getUUID()}, {
+                            okay: function(result) {
+                                if (result.taxonomies.length == 0){
+                                    FEMhub.msg.info(this, "This worksheet isn't in any Category of Taxonomy.");
+                                }else{                              
+                                    var res = "";                                
+                                    for (i=0;i<result.taxonomies.length;i++){
+                                        res = res + "[" +result.taxonomies[i]+"] ";
+                                    }
+                                    FEMhub.msg.info(this, "Worksheet belongs to: " + res); 
+                                }
+                            },
+                            fail: {
+                                'does-not-exist': "Worksheet does not exist.",
+                            },
+                            scope: this,
+                        });
+
     },
 
     setTitle: function(title, iconCls) {
