@@ -820,7 +820,7 @@ class ClientHandler(WebHandler):
             for i in range(0, len(taxonomies)):
                 for category in Category.objects.all():
                     if category.id == taxonomies[i]:
-                        categories.append(category.name)
+                        categories.append(category.get_path())
             self.return_api_result({'taxonomies': categories})
 
     @jsonrpc.authenticated

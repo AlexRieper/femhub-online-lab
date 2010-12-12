@@ -93,7 +93,7 @@ class Category(models.Model):
     parent = models.ForeignKey('self', null=True, default=None)
 
     def get_path(self):
-        """Get full path to this folder in array form. """
+        """Get full path to this category in array form. """
         path, category = [], self
 
         while category is not None:
